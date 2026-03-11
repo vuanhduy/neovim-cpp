@@ -103,6 +103,7 @@ local plugins = {
   -- LSP Configuration
   {
     "neovim/nvim-lspconfig",
+    version = "v1.*",
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
@@ -241,6 +242,11 @@ local plugins = {
     "akinsho/toggleterm.nvim",
     version = "*",
   },
+
+  -- GitHub Copilot
+  {
+    "github/copilot.vim",
+  },
 }
 
 -- Setup lazy.nvim
@@ -265,50 +271,58 @@ require("lazy").setup(plugins, {
 })
 
 -- LSP Configuration
-local lspconfig = require("lspconfig")
-local capabilities = require("cmp_nvim_lsp").default_capabilities()
+local ok_lspconfig, lspconfig = pcall(require, "lspconfig")
+local capabilities = {}
+local ok_cmp_lsp, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+if ok_cmp_lsp then
+  capabilities = cmp_nvim_lsp.default_capabilities()
+end
 
 -- Configure clangd
-lspconfig.clangd.setup({
-  capabilities = capabilities,
-  cmd = {
-    "clangd",
-    "--background-index",
-    "--clang-tidy",
-    "--header-insertion=iwyu",
-    "--completion-style=detailed",
-    "--function-arg-placeholders",
-    "--fallback-style=llvm",
-  },
-  init_options = {
-    usePlaceholders = true,
-    completeUnimported = true,
-    clangdFileStatus = true,
-  },
-  filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
-})
+if ok_lspconfig then
+  lspconfig.clangd.setup({
+    capabilities = capabilities,
+    cmd = {
+      "clangd",
+      "--background-index",
+      "--clang-tidy",
+      "--header-insertion=iwyu",
+      "--completion-style=detailed",
+      "--function-arg-placeholders",
+      "--fallback-style=llvm",
+    },
+    init_options = {
+      usePlaceholders = true,
+      completeUnimported = true,
+      clangdFileStatus = true,
+    },
+    filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
+  })
+end
 
 -- Configure Lua LSP for Neovim configuration
-lspconfig.lua_ls.setup({
-  capabilities = capabilities,
-  settings = {
-    Lua = {
-      runtime = {
-        version = "LuaJIT",
-      },
-      diagnostics = {
-        globals = { "vim" },
-      },
-      workspace = {
-        library = vim.api.nvim_get_runtime_file("", true),
-        checkThirdParty = false,
-      },
-      telemetry = {
-        enable = false,
+if ok_lspconfig then
+  lspconfig.lua_ls.setup({
+    capabilities = capabilities,
+    settings = {
+      Lua = {
+        runtime = {
+          version = "LuaJIT",
+        },
+        diagnostics = {
+          globals = { "vim" },
+        },
+        workspace = {
+          library = vim.api.nvim_get_runtime_file("", true),
+          checkThirdParty = false,
+        },
+        telemetry = {
+          enable = false,
+        },
       },
     },
-  },
-})
+  })
+end
 
 -- LSP keymaps
 vim.api.nvim_create_autocmd("LspAttach", {
@@ -403,32 +417,35 @@ telescope.setup({
 pcall(require("telescope").load_extension, "fzf")
 
 -- Treesitter configuration
-require("nvim-treesitter.configs").setup({
-  ensure_installed = { "c", "cpp", "lua", "vim", "vimdoc", "query", "cmake", "make" },
-  sync_install = false,
-  auto_install = true,
-  highlight = {
-    enable = true,
-    additional_vim_regex_highlighting = false,
-  },
-  indent = {
-    enable = true,
-  },
-  textobjects = {
-    select = {
+local ok_treesitter, treesitter_configs = pcall(require, "nvim-treesitter.configs")
+if ok_treesitter then
+  treesitter_configs.setup({
+    ensure_installed = { "c", "cpp", "lua", "vim", "vimdoc", "query", "cmake", "make" },
+    sync_install = false,
+    auto_install = true,
+    highlight = {
       enable = true,
-      lookahead = true,
-      keymaps = {
-        ["af"] = "@function.outer",
-        ["if"] = "@function.inner",
-        ["ac"] = "@class.outer",
-        ["ic"] = "@class.inner",
-        ["aa"] = "@parameter.outer",
-        ["ia"] = "@parameter.inner",
+      additional_vim_regex_highlighting = false,
+    },
+    indent = {
+      enable = true,
+    },
+    textobjects = {
+      select = {
+        enable = true,
+        lookahead = true,
+        keymaps = {
+          ["af"] = "@function.outer",
+          ["if"] = "@function.inner",
+          ["ac"] = "@class.outer",
+          ["ic"] = "@class.inner",
+          ["aa"] = "@parameter.outer",
+          ["ia"] = "@parameter.inner",
+        },
       },
     },
-  },
-})
+  })
+end
 
 -- File explorer configuration
 require("nvim-tree").setup({
@@ -561,11 +578,6 @@ require("ibl").setup({
   scope = {
     enabled = true,
   },
-})
-
--- Github Copilot configuration
-require("lazy").setup({
-    "github/copilot.vim",
 })
 
 -- Key mappings
